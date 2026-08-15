@@ -6,11 +6,11 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "prisma:migrate": "npx prisma migrate dev",
-    "prisma:generate": "npx prisma generate",
-    "prisma:studio": "npx prisma studio",
+    "prisma:migrate": "node node_modules/prisma/build/index.js migrate dev",
+    "prisma:generate": "node node_modules/prisma/build/index.js generate",
+    "prisma:studio": "node node_modules/prisma/build/index.js studio",
     "seed": "node src/seed.js",
-    "migrate:deploy": "npx prisma migrate deploy"
+    "migrate:deploy": "node node_modules/prisma/build/index.js migrate deploy"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
