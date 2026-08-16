@@ -7,11 +7,17 @@ Mercado Pago (tarjeta de crédito, débito y transferencia).
 
 ```
 petshop/
-  backend/    API en Node.js + Express + Prisma (SQLite por defecto)
+  backend/    API en Node.js + Express + Prisma (PostgreSQL)
   frontend/   React + Vite + Tailwind (tienda + panel admin)
 ```
 
 ## 1. Backend
+
+Necesitás una base de datos Postgres antes de empezar. La forma más simple
+(sin instalar nada en tu PC) es crear una gratis en
+[neon.tech](https://neon.tech) — creás un proyecto y copiás el
+**Connection string** que te da. Vas a usar esa misma base tanto en local
+como en producción.
 
 ```bash
 cd backend
@@ -20,11 +26,12 @@ cp .env.example .env
 ```
 
 Editá `.env` y completá al menos:
+- `DATABASE_URL`: el connection string de Neon (o de otro Postgres).
 - `JWT_SECRET`: cualquier texto largo y random.
 - `MP_ACCESS_TOKEN`: tu Access Token de Mercado Pago (ver paso 4).
 
-Después corré las migraciones (esto crea la base `dev.db` con las tablas) y
-cargá el admin inicial + categorías de ejemplo:
+Después corré las migraciones (esto crea las tablas en la base) y cargá el
+admin inicial + categorías de ejemplo:
 
 ```bash
 npx prisma migrate dev --name init
@@ -114,24 +121,91 @@ pedidos existentes. Después reiniciá `npm run dev` en backend y frontend.
    [tarjetas de prueba de Mercado Pago](https://www.mercadopago.com.ar/developers/es/docs/checkout-pro/additional-content/your-integrations/test/cards)
    mientras usás el Access Token de `TEST-`.
 
-## 5. Publicar el sitio (producción)
+## 5. Publicar el sitio online (GitHub + Neon + Railway + Vercel)
 
-- **Base de datos**: para producción es mejor usar Postgres en vez de SQLite.
-  En `backend/prisma/schema.prisma` cambiá `provider = "sqlite"` por
-  `provider = "postgresql"`, conseguí una base gratis en
-  [Railway](https://railway.app), [Neon](https://neon.tech) o
-  [Supabase](https://supabase.com), y poné esa URL en `DATABASE_URL`.
-- **Backend**: se puede desplegar en Railway, Render o Fly.io (soportan
-  Node.js + subida de archivos). Configurá ahí las mismas variables del
-  `.env`, usando el Access Token de producción de Mercado Pago.
-- **Imágenes**: el proyecto guarda las imágenes en el disco del servidor
-  (`backend/uploads`). Si tu hosting no tiene disco persistente, migrá esa
-  parte a un bucket (Cloudflare R2, AWS S3, etc.) — es el único cambio
-  estructural necesario para producción a gran escala.
-- **Frontend**: se puede desplegar gratis en Vercel o Netlify. Configurá ahí
-  `VITE_API_URL` apuntando a la URL pública de tu backend.
-- **Dominio propio**: cualquiera de esos hostings permite conectar un
-  dominio propio (ej. `tupetshop.com.ar`) desde su panel.
+Con esta combinación, todo queda gratis para empezar (o muy barato cuando
+crezca) y no depende de que tu PC esté prendida.
+
+### Paso 1 — Subir el código a GitHub
+
+1. Creá una cuenta en [github.com](https://github.com) si no tenés.
+2. Creá un repositorio nuevo (puede ser privado), por ejemplo `petshop`.
+3. Desde la carpeta `petshop` en tu PC:
+   ```bash
+   git init
+   git add .
+   git commit -m "Proyecto inicial"
+   git branch -M main
+   git remote add origin https://github.com/TU-USUARIO/petshop.git
+   git push -u origin main
+   ```
+   (los `.gitignore` ya están configurados para no subir `node_modules`,
+   `.env` ni la base de datos local).
+
+### Paso 2 — Base de datos en Neon
+
+1. Creá una cuenta gratis en [neon.tech](https://neon.tech).
+2. Creá un proyecto nuevo (elegí una región cercana, ej. AWS South America
+   si está disponible, o la más cercana).
+3. Copiá el **Connection string** que te muestra Neon (empieza con
+   `postgresql://...`). Es tu `DATABASE_URL` de producción.
+4. En tu PC, con ese `DATABASE_URL` puesto en `backend/.env`, corré una vez:
+   ```bash
+   cd backend
+   npx prisma migrate dev --name init
+   ```
+   Esto crea las tablas en Neon y además genera la carpeta
+   `prisma/migrations` que **tenés que subir a GitHub** (hacé
+   `git add . && git commit -m "migraciones" && git push` después de esto),
+   porque Railway la necesita para aplicar las migraciones en producción.
+
+### Paso 3 — Backend en Railway
+
+1. Creá una cuenta en [railway.app](https://railway.app) (podés entrar con
+   GitHub directamente).
+2. "New Project" → "Deploy from GitHub repo" → elegí tu repo `petshop`.
+3. Como el repo tiene backend y frontend juntos, andá a **Settings** del
+   servicio y en **Root Directory** poné `backend`.
+4. En **Variables**, cargá las mismas que tenés en `backend/.env.example`:
+   `DATABASE_URL` (el de Neon), `JWT_SECRET`, `MP_ACCESS_TOKEN`,
+   `FRONTEND_URL` (lo vas a completar en el paso 4, con la URL de Vercel),
+   y `BACKEND_PUBLIC_URL` (dejalo vacío por ahora, Railway te da la URL
+   después del primer deploy — la agregás y volvés a desplegar).
+5. Railway va a instalar dependencias y correr `npm start`, que ya incluye
+   aplicar las migraciones automáticamente antes de levantar el servidor.
+6. Una vez desplegado, Railway te da una URL pública (ej.
+   `https://petshop-production.up.railway.app`). Esa es tu
+   `BACKEND_PUBLIC_URL` — cargala en las variables y volvé a desplegar.
+7. Corré el seed una sola vez para crear tu admin en la base de Neon. La
+   forma más simple: desde tu PC, con `backend/.env` apuntando al
+   `DATABASE_URL` de Neon, corré `npm run seed`.
+8. **Imágenes subidas (uploads)**: Railway borra los archivos sueltos en
+   cada redeploy salvo que uses un *Volume*. Andá a la pestaña **Volumes**
+   del servicio, creá uno, y montalo en `/app/uploads`. Así tus fotos de
+   productos no se pierden cuando actualices el código.
+
+### Paso 4 — Frontend en Vercel
+
+1. Creá una cuenta en [vercel.com](https://vercel.com) (con GitHub).
+2. "Add New Project" → elegí tu repo `petshop`.
+3. En **Root Directory**, elegí `frontend`.
+4. En **Environment Variables**, agregá `VITE_API_URL` con la URL de tu
+   backend en Railway (ej. `https://petshop-production.up.railway.app`).
+5. Deploy. Vercel te da una URL pública (ej. `https://petshop.vercel.app`).
+6. Volvé a Railway y actualizá la variable `FRONTEND_URL` del backend con
+   esa URL de Vercel, para que el CORS y los links de pago de Mercado Pago
+   apunten bien. Volvé a desplegar el backend.
+
+### Paso 5 — Mercado Pago en producción
+
+Cuando quieras cobrar de verdad (no solo probar), en
+`mercadopago.com.ar/developers/panel` cambiá tu `MP_ACCESS_TOKEN` en
+Railway por el de **producción** (no el que empieza con `TEST-`).
+
+### Dominio propio
+
+Tanto Vercel como Railway permiten conectar un dominio propio (ej.
+`tupetshop.com.ar`) desde su panel, en la sección de "Domains" de cada uno.
 
 ## 6. Próximos pasos opcionales
 
