@@ -24,16 +24,16 @@ export default function Cart() {
           <>
             <div className="space-y-3">
               {items.map((item) => (
-                <div key={item.productId} className="bg-white border rounded-xl p-3 flex items-center gap-4">
-                  <div className="w-16 h-16 bg-stone-100 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+                <div key={item.productId} className="bg-white border rounded-xl p-3 flex items-center gap-3 sm:gap-4">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 bg-stone-100 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
                     {item.image ? (
                       <img src={`${API_URL}${item.image}`} className="w-full h-full object-cover" />
                     ) : (
                       <span>🐾</span>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-stone-800">{item.name}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-stone-800 truncate">{item.name}</div>
                     <div className="text-brand-600 font-semibold">
                       ${item.price.toLocaleString("es-AR")}
                     </div>
@@ -43,11 +43,11 @@ export default function Cart() {
                     min={1}
                     value={item.quantity}
                     onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
-                    className="w-16 border rounded-lg px-2 py-1"
+                    className="w-14 sm:w-16 border rounded-lg px-2 py-1 shrink-0"
                   />
                   <button
                     onClick={() => removeItem(item.productId)}
-                    className="text-red-500 text-sm hover:underline"
+                    className="text-red-500 text-sm hover:underline shrink-0"
                   >
                     Quitar
                   </button>

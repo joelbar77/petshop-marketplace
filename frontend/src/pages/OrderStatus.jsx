@@ -45,9 +45,9 @@ export default function OrderStatus() {
 
         <div className="bg-white border rounded-xl p-5 mt-6 text-left">
           {order.items.map((item) => (
-            <div key={item.id} className="flex justify-between py-1 text-sm">
-              <span>{item.quantity}x {item.product.name}</span>
-              <span>${(item.quantity * item.unitPrice).toLocaleString("es-AR")}</span>
+            <div key={item.id} className="flex justify-between gap-3 py-1 text-sm">
+              <span className="truncate">{item.quantity}x {item.product.name}</span>
+              <span className="shrink-0">${(item.quantity * item.unitPrice).toLocaleString("es-AR")}</span>
             </div>
           ))}
           <div className="flex justify-between border-t mt-2 pt-2 font-semibold">
